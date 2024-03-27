@@ -1,8 +1,13 @@
 import streamlit as st
+import hashlib
 from data_handler import load_data, add_player, add_match
 from elo_calculator import calculate_elo, calculate_elo_with_history
 from visualization import display_ratings, display_match_history
 from csv_manager import save_data
+
+
+login = '21232f297a57a5a743894a0e4a801fc3'
+password = '0192023a7bbd73250516f069df18b500'
 
 # Load data
 players, matches = load_data()
@@ -11,7 +16,7 @@ players, matches = load_data()
 st.title('Elo Rating System')
 
 # Create tabs
-tab_ratings, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player = st.tabs(["Рейтинг", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока"])
+tab_ratings, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player, tab_admin = st.tabs(["Рейтинг", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока", "Админка"])
 
 # Rating tab
 with tab_ratings:
@@ -97,6 +102,55 @@ with tab_add_match:
                         st.success("Матч успешно добавлен.")
                         # Обновляем DataFrame matches в интерфейсе Streamlit
                         #tab_match_history.dataframe(display_match_history(matches, players), width=1000)
+
+def check_login(login_text, password_text):
+    if hashlib.md5(login_text.encode()).hexdigest() == login and hashlib.md5(password_text.encode()).hexdigest() == password:
+        return True
+    return False
+
+# Инициализируем состояние входа
+if 'login_status' not in st.session_state:
+    st.session_state.login_status = False
+
+with tab_admin:
+    st.header('Админка')
+    if not st.session_state.login_status:
+        with st.form('admin'):
+            login_form = st.text_input('Имя пользователя')
+            password_form = st.text_input('Пароль')
+            submitted = st.form_submit_button('Вход')
+            if submitted:
+                if check_login(login_form, password_form):
+                    st.success("Вход выполнен.")
+                    st.session_state.login_status = True
+                else:
+                    st.error("Неверный логин или пароль.")
+                
+                
+    else:
+        with st.form('dataedit'):
+            # Изменяем историю матчей
+            players, matches = load_data()
+            st.subheader('Игроки')
+            players_admin = st.data_editor(players, num_rows='dynamic')
+            st.subheader('История матчей')
+            matches_admin = st.data_editor(matches, num_rows='dynamic')
+            edit = st.form_submit_button('Изменить')
+            if edit:
+                try:
+                    save_data(players_admin, matches_admin, 'players.csv', 'matches.csv')
+                    st.success("Изменения сохранены.")
+                    players = players_admin
+                    matches = matches_admin
+                except:
+                    st.error("Не удалось сохранить изменения.")
+                                                
+        # Добавляем кнопку для выхода
+        if st.button('Выйти'):
+            st.session_state.login_status = False
+            st.info("Вы вышли из системы.")
+                                                
+                                
 
 # Recalculate Elo ratings after adding matches
 if not matches.empty:
