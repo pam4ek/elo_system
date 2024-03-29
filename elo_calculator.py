@@ -15,8 +15,8 @@ def calculate_elo(players, matches, k_factor=32):
         expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
         expected_loser = 1 / (1 + 10 ** ((winner_rating - loser_rating) / 400))
         
-        players.loc[players['id'] == winner_id, 'rating'] = int(winner_rating + k_factor * (1 - expected_winner))
-        players.loc[players['id'] == loser_id, 'rating'] = int(loser_rating + k_factor * (0 - expected_loser))
+        players.loc[players['id'] == winner_id, 'rating'] = winner_rating + round(k_factor * (1 - expected_winner))
+        players.loc[players['id'] == loser_id, 'rating'] = loser_rating + round(k_factor * (0 - expected_loser))
     
     return players
 
@@ -38,8 +38,8 @@ def calculate_elo_with_history(players, matches, k_factor=32):
         expected_loser = 1 / (1 + 10 ** ((winner_rating - loser_rating) / 400))
         
         # Изменение рейтинга для победителя и проигравшего
-        rating_change_winner = int(k_factor * (1 - expected_winner))
-        rating_change_loser = int(k_factor * (0 - expected_loser))
+        rating_change_winner = round(k_factor * (1 - expected_winner))
+        rating_change_loser = round(k_factor * (0 - expected_loser))
         
         # Обновляем рейтинг для победителя и проигравшего
         players.loc[players['id'] == winner_id, 'rating'] += rating_change_winner
