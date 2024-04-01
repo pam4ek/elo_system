@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from .routers import teams, matches, users, auth
 import os
-if not os.path.exists('../database.db'):
-    os.system('./init_db.py')
+# if not os.path.exists('../database.db'):
+#     os.system('./init_db.py')
+
+from .database import engine, Base
+# from app.models import User, Team, Match
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
