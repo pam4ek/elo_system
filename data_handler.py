@@ -1,18 +1,31 @@
 import pandas as pd
 import os
 from datetime import datetime
+import google_sheet_handler
 
 def load_data():
-    players_file = 'data/players.csv'
-    matches_file = 'data/matches.csv'
+
+    db_file = 'data/EloRatingDB.xlsx'
     
-    if os.path.isfile(players_file) and os.path.isfile(matches_file):
-        players = pd.read_csv(players_file)
-        matches = pd.read_csv(matches_file)
-    else:
-        players = pd.DataFrame(columns=['id', 'name', 'rating'])
-        matches = pd.DataFrame(columns=['match_id', 'winner_id', 'loser_id', 'datetime'])
-    
+    players = None
+    matches = None
+    while players is None or matches is None:
+        try:
+            players = pd.read_excel(db_file, sheet_name='Players')
+            matches = pd.read_excel(db_file, sheet_name='Games')
+        except:
+            google_sheet_handler.download_db()
+            db = pd.read_excel(db_file, sheet_name=None)
+            if 'Players' not in db:
+                db['Players'] = pd.DataFrame(columns=['id', 'name', 'rating'])
+                with pd.ExcelWriter(db_file, engine='xlsxwriter') as writer:
+                    db['Players'].to_excel(writer, sheet_name='Players', index=False)
+   
+            if 'Games' not in db:
+                db['Games'] = pd.DataFrame(columns=['match_id', 'winner_id', 'loser_id', 'datetime'])
+                with pd.ExcelWriter(db_file, engine='xlsxwriter') as writer:
+                        db['Games'].to_excel(writer, sheet_name='Games', index=False)
+                                                
     return players, matches
 
 def add_player(players, name):

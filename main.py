@@ -8,6 +8,10 @@ from csv_manager import save_data
 
 login = '21232f297a57a5a743894a0e4a801fc3'
 password = '0192023a7bbd73250516f069df18b500'
+db_file = 'EloRatingDB.xlsx'
+
+google_api = "AIzaSyAMQq7jUNpkBc2PtQWajZevt5d8huft_Bk"
+
 
 # Load data
 players, matches = load_data()
@@ -25,7 +29,7 @@ with tab_ratings:
         # Добавление кнопки для обновления рейтинга
         if st.button('Обновить рейтинг'):
             players = calculate_elo(players, matches)
-            save_data(players, matches, 'players.csv', 'matches.csv')
+            save_data(players, matches, db_file)
             # st.success("Рейтинг обновлен.")
             # Обновляем DataFrame players в интерфейсе Streamlit
             #tab_ratings.dataframe(players[['name', 'rating']].sort_values('rating', ascending=False), width=500)
@@ -72,7 +76,7 @@ with tab_add_player:
                 st.error("Имя игрока не может быть пустым.")
             else:
                 players = add_player(players, new_player_name)
-                save_data(players, matches, 'players.csv', 'matches.csv')
+                save_data(players, matches, db_file)
                 st.success("Игрок успешно добавлен.")
                 # Обновляем DataFrame players в интерфейсе Streamlit
                 #tab_ratings.dataframe(players[['name', 'rating']].sort_values('rating', ascending=False), width=500)
@@ -98,7 +102,7 @@ with tab_add_match:
                         st.error("Игрок победитель и игрок проигравший не могут быть одним и тем же игроком.")
                     else:
                         matches = add_match(matches, winner_id, loser_id)
-                        save_data(players, matches, 'players.csv', 'matches.csv')
+                        save_data(players, matches, db_file)
                         st.success("Матч успешно добавлен.")
                         # Обновляем DataFrame matches в интерфейсе Streamlit
                         #tab_match_history.dataframe(display_match_history(matches, players), width=1000)
@@ -138,7 +142,7 @@ with tab_admin:
             edit = st.form_submit_button('Изменить')
             if edit:
                 try:
-                    save_data(players_admin, matches_admin, 'players.csv', 'matches.csv')
+                    save_data(players_admin, matches_admin, db_file)
                     st.success("Изменения сохранены.")
                     players = players_admin
                     matches = matches_admin
@@ -157,4 +161,4 @@ if not matches.empty:
     players = calculate_elo(players, matches)
 
 # Save data
-save_data(players, matches, 'players.csv', 'matches.csv')
+save_data(players, matches, db_file)
