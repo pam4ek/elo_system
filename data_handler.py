@@ -50,6 +50,6 @@ def add_match(matches, winner_id, loser_id):
         new_match_id = 1
     else:
         new_match_id = matches['match_id'].max() + 1
-    new_match = pd.DataFrame({'match_id': [new_match_id], 'winner_id': [winner_id], 'loser_id': [loser_id], 'datetime': [datetime.now().strftime("%d-%m-%Y %H:%M:%S")]})
+    new_match = pd.DataFrame({'match_id': [new_match_id], 'winner_id': [winner_id], 'loser_id': [loser_id], 'datetime': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]})
     matches = pd.concat([matches, new_match], ignore_index=True)
     return matches
