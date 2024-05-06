@@ -24,6 +24,10 @@ def create_credentials():
     cred['auth_provider_x509_cert_url'] = st.secrets["auth_provider_x509_cert_url"]
     cred['client_x509_cert_url'] = st.secrets["client_x509_cert_url"]
     cred['universe_domain'] = st.secrets["universe_domain"]
+
+    if not os.path.isdir('data'):
+        os.mkdir('data')
+    
     with open('./data/credentials.json', 'w') as file:
         json.dump(cred, file)
     return
