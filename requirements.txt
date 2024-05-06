@@ -1,7 +1,6 @@
 openpyxl
 streamlit
+streamlit-autorefresh
 pandas
-# oauth2client
-# gspread
 google-api-python-client
 xlsxwriter

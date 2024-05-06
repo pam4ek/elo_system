@@ -9,24 +9,32 @@ def load_data():
     
     players = None
     matches = None
+
+
     while players is None or matches is None:
         try:
             players = pd.read_excel(db_file, sheet_name='Players')
             matches = pd.read_excel(db_file, sheet_name='Games')
         except:
-            google_sheet_handler.download_db()
-            db = pd.read_excel(db_file, sheet_name=None)
-            if 'Players' not in db:
-                db['Players'] = pd.DataFrame(columns=['id', 'name', 'rating'])
-                with pd.ExcelWriter(db_file, engine='xlsxwriter') as writer:
-                    db['Players'].to_excel(writer, sheet_name='Players', index=False)
-   
-            if 'Games' not in db:
-                db['Games'] = pd.DataFrame(columns=['match_id', 'winner_id', 'loser_id', 'datetime'])
-                with pd.ExcelWriter(db_file, engine='xlsxwriter') as writer:
-                        db['Games'].to_excel(writer, sheet_name='Games', index=False)
+            sinchronize_data(players, matches)
                                                 
     return players, matches
+
+
+def sinchronize_data(players, matches):
+    # Если данных нет, то скачиваем
+    # Если данные есть, то загружаем в диск
+
+    if players is None or matches is None:
+        google_sheet_handler.download_db()
+        # players, matches = load_data()
+    else:
+        google_sheet_handler.upload_db()
+    return
+
+
+
+
 
 def add_player(players, name):
     if players.empty:

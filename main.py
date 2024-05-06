@@ -1,16 +1,26 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
+
 import hashlib
-from data_handler import load_data, add_player, add_match
+from data_handler import load_data, add_player, add_match, sinchronize_data
 from elo_calculator import calculate_elo, calculate_elo_with_history
 from visualization import display_ratings, display_match_history
 from csv_manager import save_data
+import json
+import os
 
 
-login = '21232f297a57a5a743894a0e4a801fc3'
-password = '0192023a7bbd73250516f069df18b500'
+
+login = st.secrets['admin_login']
+password = st.secrets['admin_pass']
+
+
+
 db_file = 'EloRatingDB.xlsx'
 
-google_api = "AIzaSyAMQq7jUNpkBc2PtQWajZevt5d8huft_Bk"
+
+count = st_autorefresh(interval=1000 * 3, limit=None, key="fizzbuzzcounter")
+
 
 
 # Load data
@@ -30,13 +40,17 @@ with tab_ratings:
         if st.button('Обновить рейтинг'):
             players = calculate_elo(players, matches)
             save_data(players, matches, db_file)
+            sinchronize_data(players, matches)
             # st.success("Рейтинг обновлен.")
             # Обновляем DataFrame players в интерфейсе Streamlit
             #tab_ratings.dataframe(players[['name', 'rating']].sort_values('rating', ascending=False), width=500)
     else:
         st.write("Нет данных о рейтинге.")
         if st.button('Обновить рейтинг'):
-            pass
+            sinchronize_data(players, matches)
+    # if st.button('Синхронизация данных'):
+        
+
 
 # Personal Results tab
 with tab_personal_rating:

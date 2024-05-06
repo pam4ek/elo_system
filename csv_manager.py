@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import google_sheet_handler
 
 def save_data(players, matches, db_file):
     if not os.path.isdir('data'):
@@ -9,4 +8,4 @@ def save_data(players, matches, db_file):
         players.to_excel(writer, sheet_name='Players', index=False)
         matches.to_excel(writer, sheet_name='Games', index=False)
 
-    google_sheet_handler.upload_db()
+    # google_sheet_handler.upload_db()

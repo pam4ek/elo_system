@@ -3,8 +3,35 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 import io
+import streamlit as st
+import json
+import os
 
-credentials = service_account.Credentials.from_service_account_file('./data/elo-system-422211-922811cf5642.json',
+def create_credentials():
+
+    if os.path.exists('./data/credentials.json'):
+        return
+    
+    cred = {}
+    cred['type'] = st.secrets["type"]
+    cred['project_id'] = st.secrets["project_id"]
+    cred['private_key_id'] = st.secrets["private_key_id"]
+    cred['private_key'] = st.secrets["private_key"]
+    cred['client_email'] = st.secrets["client_email"]
+    cred['client_id'] = st.secrets["client_id"]
+    cred['auth_uri'] = st.secrets["auth_uri"]
+    cred['token_uri'] = st.secrets["token_uri"]
+    cred['auth_provider_x509_cert_url'] = st.secrets["auth_provider_x509_cert_url"]
+    cred['client_x509_cert_url'] = st.secrets["client_x509_cert_url"]
+    cred['universe_domain'] = st.secrets["universe_domain"]
+    with open('./data/credentials.json', 'w') as file:
+        json.dump(cred, file)
+    return
+
+create_credentials()
+
+
+credentials = service_account.Credentials.from_service_account_file('./data/credentials.json',
                                                                     scopes=['https://www.googleapis.com/auth/drive'])
 # Путь к вашему CSV-файлу
 file_name = 'EloRatingDB'
@@ -53,7 +80,6 @@ def upload_db():
     
     if items:
         file_id = items[0]['id']
-        # print(f'File ID: {file_id}')
         # Обновление существующего файла
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
         file = drive_service.files().update(fileId=file_id, media_body=media).execute()
