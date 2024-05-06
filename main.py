@@ -19,7 +19,7 @@ password = st.secrets['admin_pass']
 db_file = 'EloRatingDB.xlsx'
 
 
-count = st_autorefresh(interval=1000 * 3, limit=None, key="fizzbuzzcounter")
+# count = st_autorefresh(interval=1000 * 3, limit=None, key="fizzbuzzcounter")
 
 
 
