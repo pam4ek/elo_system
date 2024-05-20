@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
+# from streamlit_autorefresh import st_autorefresh
 
 import hashlib
 from data_handler import load_data, add_player, add_match, sinchronize_data
