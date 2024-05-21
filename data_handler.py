@@ -57,7 +57,7 @@ def is_sync_needed():
     last_sync_time = load_last_sync_time()
     if last_sync_time is None:
         return True
-    return dt.now() - last_sync_time > timedelta(minutes=5)
+    return dt.now() - last_sync_time > timedelta(minutes=2)
 
 def sinchronize_data(players, matches):
     """
@@ -130,7 +130,8 @@ def sync_data():
         
         if local_last_update > remote_last_update:
             logging.info("Локальные данные новее, выгружаем на сервер.")
-            sinchronize_data(local_players, local_matches)
+            save_data(local_players, local_matches, DB_FILE)
+            google_sheet_handler.upload_db()
         else:
             logging.info("Серверные данные новее, загружаем с сервера.")
             players, matches = merge_data(local_players, local_matches, remote_players, remote_matches)
