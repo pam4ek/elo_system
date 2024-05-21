@@ -1,103 +1,92 @@
+import os
+import json
+import logging
+import io
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-
-import io
 import streamlit as st
-import json
-import os
+
+logging.basicConfig(level=logging.INFO)
 
 def create_credentials():
-
-    if os.path.exists('./data/credentials.json'):
+    """
+    Создание учетных данных для доступа к Google API.
+    """
+    cred_path = './data/credentials.json'
+    if os.path.exists(cred_path):
+        logging.info("Файл учетных данных уже существует.")
         return
     
-    cred = {}
-    cred['type'] = st.secrets["type"]
-    cred['project_id'] = st.secrets["project_id"]
-    cred['private_key_id'] = st.secrets["private_key_id"]
-    cred['private_key'] = st.secrets["private_key"]
-    cred['client_email'] = st.secrets["client_email"]
-    cred['client_id'] = st.secrets["client_id"]
-    cred['auth_uri'] = st.secrets["auth_uri"]
-    cred['token_uri'] = st.secrets["token_uri"]
-    cred['auth_provider_x509_cert_url'] = st.secrets["auth_provider_x509_cert_url"]
-    cred['client_x509_cert_url'] = st.secrets["client_x509_cert_url"]
-    cred['universe_domain'] = st.secrets["universe_domain"]
+    cred = {
+        'type': st.secrets["type"],
+        'project_id': st.secrets["project_id"],
+        'private_key_id': st.secrets["private_key_id"],
+        'private_key': st.secrets["private_key"],
+        'client_email': st.secrets["client_email"],
+        'client_id': st.secrets["client_id"],
+        'auth_uri': st.secrets["auth_uri"],
+        'token_uri': st.secrets["token_uri"],
+        'auth_provider_x509_cert_url': st.secrets["auth_provider_x509_cert_url"],
+        'client_x509_cert_url': st.secrets["client_x509_cert_url"],
+        'universe_domain': st.secrets["universe_domain"]
+    }
 
     if not os.path.isdir('data'):
         os.mkdir('data')
     
-    with open('./data/credentials.json', 'w') as file:
+    with open(cred_path, 'w') as file:
         json.dump(cred, file)
+    
+    logging.info("Файл учетных данных создан.")
     return
 
 create_credentials()
 
-
-credentials = service_account.Credentials.from_service_account_file('./data/credentials.json',
-                                                                    scopes=['https://www.googleapis.com/auth/drive'])
-# Путь к вашему CSV-файлу
-file_name = 'EloRatingDB'
+credentials = service_account.Credentials.from_service_account_file(
+    './data/credentials.json',
+    scopes=['https://www.googleapis.com/auth/drive']
+)
 
 def download_db():
-    
-    # Подключитесь к Google Drive API
+    """
+    Скачивание базы данных из Google Drive.
+    """
     drive_service = build('drive', 'v3', credentials=credentials)
-
-    # Найдите файл на Google Drive
+    file_name = 'EloRatingDB'
     query = f"name='{file_name}' and mimeType='application/vnd.google-apps.spreadsheet'"
     results = drive_service.files().list(q=query, fields='files(id)').execute()
     items = results.get('files', [])
-    # print(items)
+
     if items:
         file_id = items[0]['id']
-        # print(file_id)
-        # # URL для экспорта файла в CSV
-        # url = f"https://www.googleapis.com/drive/v3/files/{file_id}/export?mimeType='text/csv'"
-
-
-        request = drive_service.files().export_media(fileId=file_id,
-                                                    mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        request = drive_service.files().export_media(
+            fileId=file_id,
+            mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
         filename = './data/EloRatingDB.xlsx'
         fh = io.FileIO(filename, 'wb')
         downloader = MediaIoBaseDownload(fh, request)
         done = False
-        while done is False:
+        while not done:
             status, done = downloader.next_chunk()
-    #     print ("Download %d%%." % int(status.progress() * 100))
-    # else:
-    #     print('File not found')
-            
+            logging.info(f"Download {int(status.progress() * 100)}%.")
 
 def upload_db():
+    """
+    Загрузка базы данных на Google Drive.
+    """
     drive_service = build('drive', 'v3', credentials=credentials)
-
-    file_path = './data/EloRatingDB.xlsx'  # Путь к локальному файлу
-    file_name = 'EloRatingDB'  # Имя файла на Google Drive
+    file_path = './data/EloRatingDB.xlsx'
+    file_name = 'EloRatingDB'
     mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     
-    # Поиск файла на Google Drive
     query = f"name='{file_name}' and mimeType='application/vnd.google-apps.spreadsheet'"
     results = drive_service.files().list(q=query, fields='files(id)').execute()
     items = results.get('files', [])
     
     if items:
         file_id = items[0]['id']
-        # Обновление существующего файла
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
         file = drive_service.files().update(fileId=file_id, media_body=media).execute()
-    #     print(f'File ID: {file_id} has been updated.')
-    # else:
-    #     print('File not found on Google Drive.')
-
-# import pandas as pd
-# download_db()  
-# db = pd.read_excel('./data/EloRatingDB.xlsx')
-# print(db.head())
-# db.loc[db.shape[0]] = [1, 2, 3]
-# print(db.head())
-# db.to_csv('./data/EloRatingDB.xlsx', index=False)
-# upload_db()
-
-
+        logging.info("База данных успешно загружена на Google Drive.")

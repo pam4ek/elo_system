@@ -1,58 +1,43 @@
-import streamlit as st
-# from streamlit_autorefresh import st_autorefresh
-
 import hashlib
-from data_handler import load_data, add_player, add_match, sinchronize_data
+import streamlit as st
+from data_handler import DB_FILE, load_data, add_player, add_match, sinchronize_data, sync_data
 from elo_calculator import calculate_elo, calculate_elo_with_history
+from google_sheet_handler import upload_db
 from visualization import display_ratings, display_match_history
 from csv_manager import save_data
 import json
 import os
 
 
-
 login = st.secrets['admin_login']
 password = st.secrets['admin_pass']
 
 
+# Инициализация и проверка необходимости синхронизации данных
+sync_data()
 
-db_file = 'EloRatingDB.xlsx'
-
-
-# count = st_autorefresh(interval=1000 * 3, limit=None, key="fizzbuzzcounter")
-
-
-
-# Load data
+# Загрузка данных
 players, matches = load_data()
 
-# User interface to add players and matches
+# Пользовательский интерфейс
 st.title('Elo Rating System')
 
-# Create tabs
-tab_ratings, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player, tab_admin = st.tabs(["Рейтинг", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока", "Админка"])
+# Создание вкладок
+tab_ratings, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player, tab_admin = st.tabs(
+    ["Рейтинг", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока", "Админка"])
 
-# Rating tab
+# Вкладка рейтинга
 with tab_ratings:
     if not players.empty:
         display_ratings(players)
-        # Добавление кнопки для обновления рейтинга
         if st.button('Обновить рейтинг'):
             players = calculate_elo(players, matches)
-            save_data(players, matches, db_file)
-            sinchronize_data(players, matches)
-            # st.success("Рейтинг обновлен.")
-            # Обновляем DataFrame players в интерфейсе Streamlit
-            #tab_ratings.dataframe(players[['name', 'rating']].sort_values('rating', ascending=False), width=500)
+            save_data(players, matches, DB_FILE)
+            # sinchronize_data(players, matches)
     else:
         st.write("Нет данных о рейтинге.")
-        if st.button('Обновить рейтинг'):
-            sinchronize_data(players, matches)
-    # if st.button('Синхронизация данных'):
-        
 
-
-# Personal Results tab
+# Вкладка персональных результатов
 with tab_personal_rating:
     if not players.empty:
         players, players_history = calculate_elo_with_history(players, matches)
@@ -64,22 +49,14 @@ with tab_personal_rating:
     else:
         st.write("Нет игроков для выбора.")
 
-# Match History tab
+# Вкладка истории матчей
 with tab_match_history:
     if not matches.empty:
-        # Добавляем столбцы "id матча", "игрок 1", "игрок 2", "результат матча" и "время матча"
-        display_match_history(matches, players)        
-        # Добавление кнопки для обновления истории матчей
-        if st.button('Обновить историю матчей'):
-            pass
-            # Здесь можно добавить логику для обновления истории матчей, если это необходимо
-            # st.success("История матчей обновлена.")
+        display_match_history(matches, players)
     else:
         st.write("История матчей пуста.")
-        if st.button('Обновить историю матчей'):
-            pass
 
-# Add Player tab
+# Вкладка добавления игрока
 with tab_add_player:
     st.header('Добавить игрока')
     with st.form('add_player'):
@@ -90,12 +67,10 @@ with tab_add_player:
                 st.error("Имя игрока не может быть пустым.")
             else:
                 players = add_player(players, new_player_name)
-                save_data(players, matches, db_file)
+                save_data(players, matches, DB_FILE)
                 st.success("Игрок успешно добавлен.")
-                # Обновляем DataFrame players в интерфейсе Streamlit
-                #tab_ratings.dataframe(players[['name', 'rating']].sort_values('rating', ascending=False), width=500)
 
-# Add Match tab
+# Вкладка добавления матча
 with tab_add_match:
     st.header('Добавить матч')
     with st.form('add_match'):
@@ -112,21 +87,19 @@ with tab_add_match:
                 else:
                     winner_id = players[players['name'] == player1_name]['id'].values[0] if winner == 'Игрок 1' else players[players['name'] == player2_name]['id'].values[0]
                     loser_id = players[players['name'] == player2_name]['id'].values[0] if winner == 'Игрок 1' else players[players['name'] == player1_name]['id'].values[0]
-                    if winner_id == loser_id:
-                        st.error("Игрок победитель и игрок проигравший не могут быть одним и тем же игроком.")
-                    else:
-                        matches = add_match(matches, winner_id, loser_id)
-                        save_data(players, matches, db_file)
-                        st.success("Матч успешно добавлен.")
-                        # Обновляем DataFrame matches в интерфейсе Streamlit
-                        #tab_match_history.dataframe(display_match_history(matches, players), width=1000)
+                    matches = add_match(matches, winner_id, loser_id)
+                    save_data(players, matches, DB_FILE)
+                    st.success("Матч успешно добавлен.")
+                    # Обновляем рейтинги после добавления матча
+                    players = calculate_elo(players, matches)
+                    save_data(players, matches, DB_FILE)
 
 def check_login(login_text, password_text):
     if hashlib.md5(login_text.encode()).hexdigest() == login and hashlib.md5(password_text.encode()).hexdigest() == password:
         return True
     return False
 
-# Инициализируем состояние входа
+# Инициализация состояния входа
 if 'login_status' not in st.session_state:
     st.session_state.login_status = False
 
@@ -143,11 +116,8 @@ with tab_admin:
                     st.session_state.login_status = True
                 else:
                     st.error("Неверный логин или пароль.")
-                
-                
     else:
         with st.form('dataedit'):
-            # Изменяем историю матчей
             players, matches = load_data()
             st.subheader('Игроки')
             players_admin = st.data_editor(players, num_rows='dynamic')
@@ -156,23 +126,13 @@ with tab_admin:
             edit = st.form_submit_button('Изменить')
             if edit:
                 try:
-                    save_data(players_admin, matches_admin, db_file)
+                    save_data(players_admin, matches_admin, DB_FILE)
                     st.success("Изменения сохранены.")
                     players = players_admin
                     matches = matches_admin
+                    upload_db()
                 except:
                     st.error("Не удалось сохранить изменения.")
-                                                
-        # Добавляем кнопку для выхода
         if st.button('Выйти'):
             st.session_state.login_status = False
             st.info("Вы вышли из системы.")
-                                                
-                                
-
-# Recalculate Elo ratings after adding matches
-if not matches.empty:
-    players = calculate_elo(players, matches)
-
-# Save data
-save_data(players, matches, db_file)
