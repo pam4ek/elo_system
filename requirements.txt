@@ -4,3 +4,4 @@ streamlit-autorefresh
 pandas
 google-api-python-client
 xlsxwriter
+plotly

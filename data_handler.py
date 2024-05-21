@@ -3,7 +3,8 @@ import os
 from csv_manager import save_data
 import google_sheet_handler
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime as dt, timedelta
+import datetime
 
 logging.basicConfig(level=logging.INFO)
 
@@ -38,7 +39,7 @@ def save_last_sync_time():
     if directory and not os.path.exists(directory):
         os.makedirs(directory)
     with open(SYNC_TIMESTAMP_FILE, 'w') as f:
-        f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        f.write(dt.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 def load_last_sync_time():
     """
@@ -46,7 +47,7 @@ def load_last_sync_time():
     """
     if os.path.exists(SYNC_TIMESTAMP_FILE):
         with open(SYNC_TIMESTAMP_FILE, 'r') as f:
-            return datetime.strptime(f.read().strip(), "%Y-%m-%d %H:%M:%S")
+            return dt.strptime(f.read().strip(), "%Y-%m-%d %H:%M:%S")
     return None
 
 def is_sync_needed():
@@ -56,7 +57,7 @@ def is_sync_needed():
     last_sync_time = load_last_sync_time()
     if last_sync_time is None:
         return True
-    return datetime.now() - last_sync_time > timedelta(minutes=5)
+    return dt.now() - last_sync_time > timedelta(minutes=5)
 
 def sinchronize_data(players, matches):
     """
@@ -91,7 +92,7 @@ def add_match(matches, winner_id, loser_id):
         'match_id': [new_match_id],
         'winner_id': [winner_id],
         'loser_id': [loser_id],
-        'datetime': [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+        'datetime': [dt.now().strftime("%Y-%m-%d %H:%M:%S")]
     })
     matches = pd.concat([matches, new_match], ignore_index=True)
     return matches
@@ -139,3 +140,34 @@ def sync_data():
         save_data(remote_players, remote_matches, DB_FILE)
     
     save_last_sync_time()
+
+
+
+def get_current_sprint_start():
+    """
+    Возвращает дату начала текущего спринта.
+    Спринт начинается в понедельник нечетной недели года и длится две недели.
+    """
+    today = datetime.date.today()
+    year, week, _ = today.isocalendar()
+    
+    # Найти понедельник текущей недели
+    monday_of_current_week = today - timedelta(days=today.weekday())
+    
+    # Проверка, является ли текущая неделя нечетной
+    if week % 2 == 0:
+        # Если текущая неделя четная, спринт начался на прошлой нечетной неделе
+        start_sprint = monday_of_current_week - timedelta(weeks=1)
+    else:
+        # Если текущая неделя нечетная, спринт начался на этой неделе
+        start_sprint = monday_of_current_week
+    
+    return start_sprint
+
+def get_matches_for_current_sprint(matches):
+    """
+    Возвращает матчи, сыгранные в текущем спринте.
+    """
+    start_sprint = get_current_sprint_start()
+    end_sprint = start_sprint + timedelta(weeks=2)
+    return matches[(matches['datetime'] >= str(start_sprint)) & (matches['datetime'] < str(end_sprint))]
