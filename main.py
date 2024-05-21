@@ -1,13 +1,15 @@
 import hashlib
 import streamlit as st
-from data_handler import DB_FILE, load_data, add_player, add_match, sinchronize_data, sync_data
+from data_handler import DB_FILE, get_current_sprint_start, get_matches_for_current_sprint, load_data, add_player, add_match, sinchronize_data, sync_data
 from elo_calculator import calculate_elo, calculate_elo_with_history
 from google_sheet_handler import upload_db
 from visualization import display_ratings, display_match_history
 from csv_manager import save_data
+import plotly.express as px
+import pandas as pd
 import json
 import os
-
+import datetime
 
 login = st.secrets['admin_login']
 password = st.secrets['admin_pass']
@@ -23,8 +25,8 @@ players, matches = load_data()
 st.title('Elo Rating System')
 
 # Создание вкладок
-tab_ratings, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player, tab_admin = st.tabs(
-    ["Рейтинг", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока", "Админка"])
+tab_ratings, tab_sprint_rating, tab_personal_rating, tab_match_history, tab_add_match, tab_add_player, tab_admin = st.tabs(
+    ["Рейтинг", "Рейтинг спринта", "Персональные результаты", "История матчей", "Добавить матч", "Добавить игрока", "Админка"])
 
 # Вкладка рейтинга
 with tab_ratings:
@@ -37,6 +39,31 @@ with tab_ratings:
     else:
         st.write("Нет данных о рейтинге.")
 
+# Вкладка рейтинга спринта
+with tab_sprint_rating:
+    st.header('Рейтинг текущего спринта')
+    
+    current_sprint_start = get_current_sprint_start()
+    st.write(f"Текущий спринт начался {current_sprint_start} и закончится {current_sprint_start + datetime.timedelta(weeks=2)}.")
+    
+    sprint_matches = get_matches_for_current_sprint(matches)
+    if not sprint_matches.empty:
+        st.write("Матчи текущего спринта:")
+        display_match_history(sprint_matches, players)
+        
+        sprint_players = players.copy()
+        sprint_players = calculate_elo(sprint_players, sprint_matches)
+        
+        st.write("Рейтинг игроков в текущем спринте:")
+        display_ratings(sprint_players)
+    else:
+        st.write("Нет матчей в текущем спринте.")
+    
+    # Отображение победителей предыдущих спринтов
+    # st.header('Победители предыдущих спринтов')
+    # Логика для получения и отображения победителей предыдущих спринтов
+    # Например, можно хранить победителей в отдельном файле или базе данных
+
 # Вкладка персональных результатов
 with tab_personal_rating:
     if not players.empty:
@@ -46,6 +73,17 @@ with tab_personal_rating:
             player_id = players.loc[players['name'] == selected_player, 'id'].values[0]
             player_matches_with_names = players_history[player_id]
             st.dataframe(player_matches_with_names)
+            
+            # График изменений рейтинга
+            player_matches_with_names['datetime'] = pd.to_datetime(player_matches_with_names['datetime'])
+            fig = px.line(player_matches_with_names, x='datetime', y='rating_new', title='История изменений рейтинга')
+            st.plotly_chart(fig)
+            
+            # Расчет винрейта
+            total_matches = len(player_matches_with_names)
+            wins = len(player_matches_with_names[player_matches_with_names['result'] == 'Победа'])
+            winrate = (wins / total_matches) * 100 if total_matches > 0 else 0
+            st.metric(label='Общий винрейт', value=f'{winrate:.2f}%')
     else:
         st.write("Нет игроков для выбора.")
 

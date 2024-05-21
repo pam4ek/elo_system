@@ -54,7 +54,6 @@ def calculate_elo_with_history(players, matches, k_factor=32):
             'result': ['Победа'],
             'rating_change': [rating_change_winner],
             'rating_new': [players.loc[players['id'] == winner_id, 'rating'].values[0]],
-            # 'opponent_rating_change': [-rating_change_loser],
             'datetime': [match['datetime']]
         })
         player_history[winner_id] = pd.concat([player_history[winner_id], new_row_winner], ignore_index=True)
@@ -65,7 +64,6 @@ def calculate_elo_with_history(players, matches, k_factor=32):
             'result': ['Поражение'],
             'rating_change': [rating_change_loser],
             'rating_new': [players.loc[players['id'] == loser_id, 'rating'].values[0]],
-            # 'opponent_rating_change': [-rating_change_winner],
             'datetime': [match['datetime']]
         })
         player_history[loser_id] = pd.concat([player_history[loser_id], new_row_loser], ignore_index=True)
